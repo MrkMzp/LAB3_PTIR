@@ -15,9 +15,11 @@ typedef uint8_t temperature_table_index_type;
 #define TEMPERATURE_TABLE_STEP 20
 #define TEMPERATURE_TABLE_READ(i) pgm_read_word(&termo_table[i])
 
+#define ADC_VOLT(x) (x * (5.0 / 1024.0))
 
 volatile uint8_t dig[3] = {0 , 0 , 0};
 volatile uint8_t temperature = 0;
+volatile uint16_t acd_volts = 0; 
 
 volatile temperature_table_entry_type ADC
 
@@ -169,7 +171,7 @@ int16_t calc_temperature(temperature_table_entry_type adcsum)
 void initADC() 
 {
     ADMUX |= (1 << REFS0);
-    ADMUX |= (0 << MUX0);
+    ADMUX |= (1 << MUX0);
     ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
     ADCSRA |= (1 << ADIE);
     ADCSRA |= (1 << ADEN);
@@ -181,12 +183,12 @@ uint16_t read_adc() {
 
     while (ADCSRA & (1 << ADSC));
     
-    return ADC;
+    return  (ADCH << 8) | ADCL;
 }
 
 ISR(ADC_vect) 
 { 
-	degree = read_adc();
+	adc_volts = ADC_VOLT(read_adc());
 }
 
 
@@ -208,6 +210,8 @@ int main()
 	short degree = 0;
     while (1) 
     {		
+		degree = calc_temperature(adc_volts) / 10;
+		
 		dig[0] = degree %10;
 		dig[1] = ( degree / 10 ) % 10;
 		if(degree >= 0)
