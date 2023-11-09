@@ -19,9 +19,9 @@ typedef uint8_t temperature_table_index_type;
 
 volatile uint8_t dig[3] = {0 , 0 , 0};
 volatile uint8_t temperature = 0;
-volatile uint16_t acd_volts = 0; 
+volatile uint16_t adc_volts = 0; 
 
-volatile temperature_table_entry_type ADC
+
 
 void DrawDigit(uint8_t digit)
 {
@@ -92,7 +92,7 @@ void ShowDegrees()
 	PORTB = 0x04;
 	if(dig[2] == 0)
 	{
-		PORTD = 0x10
+		PORTD = 0x10;
 	}
 	ClearDisplay();
 	
@@ -203,8 +203,8 @@ int main()
 	
 	DDRC = 0x3C;
 	PORTC = 0x00;
-
-	timer1_init();
+	
+	initADC();
     sei();
     
 	short degree = 0;
