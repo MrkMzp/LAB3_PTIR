@@ -195,7 +195,7 @@ ISR(ADC_vect)
 int main()
 {
 	// Init ports for LEDs
-	DDRB = 0x03;
+	DDRB = 0x07;
 	PORTB = 0x00;
 	
 	DDRD = 0xF4;
@@ -223,6 +223,14 @@ int main()
 		}
 		
 		ShowDegrees();
+		
+		if(degree <= 10)
+		{
+			PORTB |= 0x04;
+		}else
+		{
+			PORTB &= 0xFB;	
+		}
     }
     
 	return 0;
