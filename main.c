@@ -19,6 +19,8 @@ typedef uint8_t temperature_table_index_type;
 volatile uint8_t dig[3] = {0 , 0 , 0};
 volatile uint8_t temperature = 0;
 
+volatile temperature_table_entry_type ADC
+
 void DrawDigit(uint8_t digit)
 {
 	if(digit == 0)
@@ -86,7 +88,10 @@ void ShowDegrees()
 {
 	//first digit (x 0 0)
 	PORTB = 0x04;
-	DrawDigit(dig[2]);
+	if(dig[2] == 0)
+	{
+		PORTD = 0x10
+	}
 	ClearDisplay();
 	
 	//second (0 x 0)
@@ -102,8 +107,8 @@ void ShowDegrees()
 	return;
 }
 
-
-const temperature_table_entry_type termo_table[] PROGMEM = {
+const temperature_table_entry_type termo_table[] PROGMEM = 
+{
     960, 952, 944, 935, 925, 914, 903, 891,
     878, 865, 850, 835, 819, 802, 785, 767,
     748, 729, 709, 689, 669, 648, 627, 606,
@@ -111,13 +116,14 @@ const temperature_table_entry_type termo_table[] PROGMEM = {
     423
 };
 
-
-int16_t calc_temperature(temperature_table_entry_type adcsum) {
+int16_t calc_temperature(temperature_table_entry_type adcsum) 
+{
   temperature_table_index_type l = 0;
   temperature_table_index_type r = (sizeof(termo_table) / sizeof(termo_table[0])) - 1;
   temperature_table_entry_type thigh = TEMPERATURE_TABLE_READ(r);
   
-  if (adcsum <= thigh) {
+  if (adcsum <= thigh) 
+  {
     #ifdef TEMPERATURE_UNDER
       if (adcsum < thigh) 
         return TEMPERATURE_UNDER;
@@ -133,13 +139,16 @@ int16_t calc_temperature(temperature_table_entry_type adcsum) {
     return TEMPERATURE_TABLE_START;
   }
 
-  // Двоичный поиск по таблице
-  while ((r - l) > 1) {
+
+  while ((r - l) > 1) 
+  {
     temperature_table_index_type m = (l + r) >> 1;
     temperature_table_entry_type mid = TEMPERATURE_TABLE_READ(m);
-    if (adcsum > mid) {
+    if (adcsum > mid) 
+    {
       r = m;
-    } else {
+    } else 
+    {
       l = m;
     }
   }
@@ -150,14 +159,35 @@ int16_t calc_temperature(temperature_table_entry_type adcsum) {
   temperature_table_entry_type vr = TEMPERATURE_TABLE_READ(r);
   temperature_table_entry_type vd = vl - vr;
   int16_t res = TEMPERATURE_TABLE_START + r * TEMPERATURE_TABLE_STEP; 
-  if (vd) {
-    // Линейная интерполяция
+  if (vd) 
+  {
     res -= ((TEMPERATURE_TABLE_STEP * (int32_t)(adcsum - vr) + (vd >> 1)) / vd);
   }
   return res;
 }
 
+void initADC() 
+{
+    ADMUX |= (1 << REFS0);
+    ADMUX |= (0 << MUX0);
+    ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+    ADCSRA |= (1 << ADIE);
+    ADCSRA |= (1 << ADEN);
+}
 
+uint16_t read_adc() {
+
+    ADCSRA |= (1 << ADSC);
+
+    while (ADCSRA & (1 << ADSC));
+    
+    return ADC;
+}
+
+ISR(ADC_vect) 
+{ 
+	degree = read_adc();
+}
 
 
 int main()
@@ -172,11 +202,24 @@ int main()
 	DDRC = 0x3C;
 	PORTC = 0x00;
 
+	timer1_init();
+    sei();
+    
+	short degree = 0;
     while (1) 
-    {
-	
+    {		
+		dig[0] = degree %10;
+		dig[1] = ( degree / 10 ) % 10;
+		if(degree >= 0)
+		{
+			 dig[2] = 0;
+		}else
+		{
+			 dig[2] = 1;
+		}
 		
+		ShowDegrees();
     }
-    	
+    
 	return 0;
 }
